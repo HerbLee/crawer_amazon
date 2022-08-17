@@ -1,3 +1,7 @@
+import time
+
+from redis_client import *
+
 import requests
 from lxml import etree
 
@@ -21,7 +25,6 @@ class Req:
 
     def get_by_net(self, url):
         res = requests.get(url, headers=self.headers)
-        print(res.text)
         html = etree.HTML(res.text)
         return html
 
@@ -37,13 +40,13 @@ def get_root_category():
     html = req.get_by_net(URL)
     dt = html.xpath('//li[@class="a-spacing-micro apb-browse-refinements-indent-2"]//a[@class="a-color-base '
                     'a-link-normal"]')
-    url_map = {}
+    # url_map = {}
     for item in dt:
         url = item.xpath("./@href")
         name = item.xpath("./span/text()")
-        url_map[name[0]] = url[0]
-
-    return url_map
+        # url_map[name[0]] = url[0]
+        res = {"name": name, "url": url}
+        add_root_url(**res)
 
 
 def get_more(url):
@@ -56,34 +59,72 @@ def get_more(url):
 def get_second_category(url):
     """获取二级类目"""
     html = req.get_by_net(url)
-    print(html)
     # hs = html.xpath('//ul[@class="a-unordered-list a-nostyle a-vertical a-spacing-medium"]/li[@class="a-spacing-micro s-navigation-indent-2"]//a')
-    hs = html.xpath('//ul[@class="a-unordered-list a-nostyle a-vertical a-spacing-medium"]/li[@class="a-spacing-micro s-navigation-indent-2"]/span/a')
-    print(hs)
-    url_map = {}
+    hs = html.xpath(
+        '//ul[@class="a-unordered-list a-nostyle a-vertical a-spacing-medium"]/li[@class="a-spacing-micro s-navigation-indent-2"]/span/a')
     for item in hs:
         url = item.xpath("./@href")
         name = item.xpath("./span/text()")
-        url_map[name[0]] = url[0]
-    return url_map
+
+        res = {"name": name, "url": url}
+        add_second_url(**res)
 
 
-def get_data_list(url):
+def get_data_list(cat_name, url):
     html = req.get_by_net(url)
-    hs = html.xpath('//div[@class="sg-col-4-of-12 s-result-item s-asin sg-col-4-of-16 sg-col s-widget-spacing-small sg-col-4-of-20"]//div[@class="a-section a-spacing-base"]//h2')
-    data_list = {}
+    hs = html.xpath(
+        '//div[@class="sg-col-4-of-12 s-result-item s-asin sg-col-4-of-16 sg-col s-widget-spacing-small sg-col-4-of-20"]//div[@class="a-section a-spacing-base"]//h2')
     for item in hs:
         url = item.xpath("./a/@href")[0]
         name = item.xpath("./a/span/text()")[0]
-        data_list[name] = url
+        res = {"cat_name": cat_name, "name": name, "url": url}
+        add_item_list(**res)
 
-    next_page = html.xpath('//a[@class="s-pagination-item s-pagination-next s-pagination-button s-pagination-separator"]/@href')
+    time.sleep(2)
+    next_page = html.xpath(
+        '//a[@class="s-pagination-item s-pagination-next s-pagination-button s-pagination-separator"]/@href')
+    print("has next page {}".format(next_page))
     if next_page:
-        get_data_list("")
+        get_data_list(cat_name, "https://www.amazon.cn/{}".format(next_page[0]))
 
 
+def get_list_item():
+    while True:
+        url = pop_second_url()
+        print(url)
+        if not url:
+            print("success")
+            break
+        data = eval(url)
+        name = data.get("name")
+        url = data.get("url")
+        get_data_list(name, "https://www.amazon.cn/{}".format(url))
+
+
+def get_second():
+    while True:
+        url = pop_root_url()
+        print(url)
+        if not url:
+            print("success")
+            break
+        data = eval(url)
+        name = data.get("name")
+        url = data.get("url")
+        try:
+            url1 = get_more("https://www.amazon.cn/{}".format(url))
+        except:
+            continue
+        get_second_category("https://www.amazon.cn/{}".format(url1))
+        print("==========={}".format(url))
+        time.sleep(1)
+
+
+# def goods_item(c_name, name, url):
+#     html = req.get_by_net(url)
+#
+#
 
 if __name__ == '__main__':
-    uuu = "https://www.amazon.cn/s?i=toys-and-games&bbn=1982054051&rh=n%3A647070051%2Cn%3A1982054051%2Cn%3A1982480051&dc&fs=true&qid=1660720897&rnid=1982054051&ref=sr_nr_n_1&ds=v1%3Ar%2Fu1nsqDkQiKBEWwaN3gK%2F7Rv3atMlPNg4eKSCofxYs"
-    res = get_data_list(uuu)
-    print(res)
+    get_list_item()
+    # goods_item("","","https://www.amazon.cn/dp/B06WWR2RQ7/ref=sr_1_5?qid=1660721625&rnid=1982054051&s=toys-and-games&sr=1-5&th=1")
