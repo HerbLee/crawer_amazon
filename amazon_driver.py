@@ -42,4 +42,8 @@ def run():
 
 
 if __name__ == '__main__':
-    run()
+    # run()
+    da = "89.32 12d"
+    print(id(da))
+    da = da.replace(" ","")
+    print(id(da))

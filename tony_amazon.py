@@ -8,6 +8,35 @@ from lxml import etree
 URL = "https://www.amazon.cn/s?i=toys-and-games"
 
 
+def parse_text(content):
+    print(content)
+    if not content:
+        return ""
+    return content[0].strip()
+
+
+class AmazonGoods:
+
+    def __init__(self, html):
+        self.html = html
+
+    def get_title(self):
+        title = self.html.xpath('//span[@id="productTitle"]/text()')
+        return parse_text(title)
+
+    def get_price(self):
+        price = self.html.xpath('//div[@id="corePrice_feature_div"]//span[@class="a-offscreen"]/text()')
+        return parse_text(price)
+
+    def run(self):
+        t = self.get_title()
+        pc = self.get_price()
+        print("=====")
+        print(t)
+        print(pc)
+
+
+
 class Req:
     def __init__(self):
         self.headers = {
@@ -25,6 +54,7 @@ class Req:
 
     def get_by_net(self, url):
         res = requests.get(url, headers=self.headers)
+        print(res.status_code)
         html = etree.HTML(res.text)
         return html
 
@@ -59,7 +89,6 @@ def get_more(url):
 def get_second_category(url):
     """获取二级类目"""
     html = req.get_by_net(url)
-    # hs = html.xpath('//ul[@class="a-unordered-list a-nostyle a-vertical a-spacing-medium"]/li[@class="a-spacing-micro s-navigation-indent-2"]//a')
     hs = html.xpath(
         '//ul[@class="a-unordered-list a-nostyle a-vertical a-spacing-medium"]/li[@class="a-spacing-micro s-navigation-indent-2"]/span/a')
     for item in hs:
@@ -120,11 +149,17 @@ def get_second():
         time.sleep(1)
 
 
-# def goods_item(c_name, name, url):
-#     html = req.get_by_net(url)
-#
-#
+def goods_item(c_name, name, url):
+    html = req.get_by_net(url)
+    print(html)
+    dat = html.xpath('//span[@id="productTitle"]/text()')
+    print(dat)
+    ag = AmazonGoods(html)
+    ag.run()
+
+
+
 
 if __name__ == '__main__':
-    get_list_item()
-    # goods_item("","","https://www.amazon.cn/dp/B06WWR2RQ7/ref=sr_1_5?qid=1660721625&rnid=1982054051&s=toys-and-games&sr=1-5&th=1")
+    # get_list_item()
+    goods_item("","","https://www.amazon.cn/dp/B07N88MGS3/ref=sr_1_2?brr=1&qid=1660806906&rd=1&s=toys-and-games&sr=1-2&th=1")
